@@ -1,0 +1,13 @@
+[build]
+target = "i686-sys-windows-msvc"
+rustflags = ["--cfg", "disable_float", "-C", "soft-float"]
+
+[target.i686-sys-windows-msvc.ntoskrnl]
+rustc-link-search = [ "f:/DDK/7600/lib/win7/i386" ]
+rustc-link-lib =  [ "ntoskrnl", "hal" ]
+root = "ntoskrnl"
+
+[target.x86_64-sys-windows-msvc.ntoskrnl]
+rustc-link-search = [ "f:/DDK/7600/lib/win7/amd64" ]
+rustc-link-lib =  [ "ntoskrnl", "hal" ]
+root = "ntoskrnl"

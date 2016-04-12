@@ -1,0 +1,52 @@
+{
+  "_": "Inspired by https://github.com/ryanbreen/breenix/blob/master/x86_64-unknown-none-gnu.json",
+  "_note": "`is_like_mcvc` works since #32823, nightly 2016-04-12",
+
+  "llvm-target": "i686-pc-windows-msvc",
+  "target-endian": "little",
+  "target-pointer-width": "32",
+
+  "oldcpu": "pentium4",
+  "cpu": "corei7-avx",
+  "features": "-mmx,-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-3dnow,-3dnowa,-avx,-avx2",
+
+  "arch": "x86",
+  "vendor": "pc",
+  "os": "windows",
+  "env": "msvc",
+
+  "executables": true,
+  "dynamic-linking": true,
+
+  "is-like-windows": true,
+  "is-like-msvc": true,
+
+  "dll-prefix": "",
+  "dll-suffix": ".sys",
+  "exe-prefix": "",
+  "exe-suffix": ".exe",
+  "staticlib-prefix": "lib",
+  "staticlib-suffix": ".lib",
+
+  "no-default-libraries":     true,
+  "no-compiler-rt":           true,
+  "has-rpath":                false,
+
+  "function-sections":        true,
+  "has-elf-tls":              false,
+  "disable-redzone":          true,
+  "custom-unwind-resume":     false,
+  "eliminate-frame-pointer":  false,
+  "position-independent-executables": false,
+
+  "code-model":              "kernel",
+  "relocation-model":        "dynamic-no-pic",
+
+  "pre-link-args": ["/NOLOGO", "/NODEFAULTLIB", "/SUBSYSTEM:NATIVE", "/DRIVER", "/RELEASE", "/NXCOMPAT", "/DYNAMICBASE",
+    "/INCREMENTAL:NO", "/MANIFEST:NO", "/FIXED:No"],
+
+  "post-link-args": ["/OPT:REF,ICF", "ntoskrnl.lib", "hal.lib",
+    "/noimplib", "/ENTRY:DriverEntry", "/DEF:exports.def", "/MERGE:.edata=.rdata", "/MERGE:.rustc=.data"],
+
+  "_end" : false
+}
