@@ -1,0 +1,3 @@
+[submodule "km"]
+	path = km
+	url = https://github.com/pravic/winapi-km-rs.git
