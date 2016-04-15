@@ -44,7 +44,7 @@
   "pre-link-args": ["/NOLOGO", "/NODEFAULTLIB", "/SUBSYSTEM:NATIVE", "/DRIVER", "/RELEASE", "/NXCOMPAT", "/DYNAMICBASE",
     "/INCREMENTAL:NO", "/MANIFEST:NO", "/FIXED:No"],
 
-  "post-link-args": ["/OPT:REF,ICF", "ntoskrnl.lib", "hal.lib", "/LIBPATH:f:/DDK/7600/lib/win7/amd64",
+  "post-link-args": ["/OPT:REF,ICF", "ntoskrnl.lib", "hal.lib",
     "/noimplib", "/ENTRY:DriverEntry", "/DEF:exports.def", "/MERGE:.edata=.rdata", "/MERGE:.rustc=.data"],
 
   "_end" : false
