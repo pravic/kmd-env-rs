@@ -1,10 +1,12 @@
 {
   "_": "Inspired by https://github.com/ryanbreen/breenix/blob/master/x86_64-unknown-none-gnu.json",
   "_note": "`is_like_mcvc` works since #32823, nightly 2016-04-12",
+  "_note": "`data-layout` became mandatory since rust-lang/rust#32939, nightly 2016-04-20",
 
   "llvm-target": "x86_64-pc-windows-msvc",
   "target-endian": "little",
   "target-pointer-width": "64",
+  "data-layout": "e-m:w-i64:64-f80:128-n8:16:32:64-S128",
 
   "cpu": "x86-64",
   "features": "-mmx,-sse,-sse2,-sse3,-ssse3,-sse4.1,-sse4.2,-3dnow,-3dnowa,-avx,-avx2",
