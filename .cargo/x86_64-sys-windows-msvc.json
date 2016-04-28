@@ -44,7 +44,7 @@
   "relocation-model":        "dynamic-no-pic",
 
   "pre-link-args": ["/NOLOGO", "/NODEFAULTLIB", "/SUBSYSTEM:NATIVE", "/DRIVER", "/RELEASE", "/NXCOMPAT", "/DYNAMICBASE",
-    "/INCREMENTAL:NO", "/MANIFEST:NO", "/FIXED:No"],
+    "/INCREMENTAL:NO", "/MANIFEST:NO"],
 
   "post-link-args": ["/OPT:REF,ICF", "ntoskrnl.lib", "hal.lib",
     "/noimplib", "/ENTRY:DriverEntry", "/DEF:exports.def", "/MERGE:.edata=.rdata", "/MERGE:.rustc=.data"],
