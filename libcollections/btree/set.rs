@@ -379,7 +379,7 @@ impl<T: Ord> BTreeSet<T> {
     /// The value may be any borrowed form of the set's value type,
     /// but the ordering on the borrowed form *must* match the
     /// ordering on the value type.
-    #[unstable(feature = "set_recovery", issue = "28050")]
+    #[stable(feature = "set_recovery", since = "1.9.0")]
     pub fn get<Q: ?Sized>(&self, value: &Q) -> Option<&T>
         where T: Borrow<Q>,
               Q: Ord
@@ -502,7 +502,7 @@ impl<T: Ord> BTreeSet<T> {
 
     /// Adds a value to the set, replacing the existing value, if any, that is equal to the given
     /// one. Returns the replaced value.
-    #[unstable(feature = "set_recovery", issue = "28050")]
+    #[stable(feature = "set_recovery", since = "1.9.0")]
     pub fn replace(&mut self, value: T) -> Option<T> {
         Recover::replace(&mut self.map, value)
     }
@@ -538,12 +538,47 @@ impl<T: Ord> BTreeSet<T> {
     /// The value may be any borrowed form of the set's value type,
     /// but the ordering on the borrowed form *must* match the
     /// ordering on the value type.
-    #[unstable(feature = "set_recovery", issue = "28050")]
+    #[stable(feature = "set_recovery", since = "1.9.0")]
     pub fn take<Q: ?Sized>(&mut self, value: &Q) -> Option<T>
         where T: Borrow<Q>,
               Q: Ord
     {
         Recover::take(&mut self.map, value)
+    }
+
+    /// Moves all elements from `other` into `Self`, leaving `other` empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// #![feature(btree_append)]
+    /// use std::collections::BTreeSet;
+    ///
+    /// let mut a = BTreeSet::new();
+    /// a.insert(1);
+    /// a.insert(2);
+    /// a.insert(3);
+    ///
+    /// let mut b = BTreeSet::new();
+    /// b.insert(3);
+    /// b.insert(4);
+    /// b.insert(5);
+    ///
+    /// a.append(&mut b);
+    ///
+    /// assert_eq!(a.len(), 5);
+    /// assert_eq!(b.len(), 0);
+    ///
+    /// assert!(a.contains(&1));
+    /// assert!(a.contains(&2));
+    /// assert!(a.contains(&3));
+    /// assert!(a.contains(&4));
+    /// assert!(a.contains(&5));
+    /// ```
+    #[unstable(feature = "btree_append", reason = "recently added as part of collections reform 2",
+               issue = "19986")]
+    pub fn append(&mut self, other: &mut Self) {
+        self.map.append(&mut other.map);
     }
 }
 

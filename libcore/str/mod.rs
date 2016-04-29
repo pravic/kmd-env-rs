@@ -19,7 +19,6 @@ use self::pattern::{Searcher, ReverseSearcher, DoubleEndedSearcher};
 
 use char::{self, CharExt};
 use clone::Clone;
-use cmp::Eq;
 use convert::AsRef;
 use default::Default;
 use fmt;
@@ -29,7 +28,6 @@ use marker::Sized;
 use mem;
 use ops::{Fn, FnMut, FnOnce};
 use option::Option::{self, None, Some};
-use raw::{Repr, Slice};
 use result::Result::{self, Ok, Err};
 use slice::{self, SliceExt};
 
@@ -1320,7 +1318,6 @@ Section: Trait implementations
 
 mod traits {
     use cmp::{Ord, Ordering, PartialEq, PartialOrd, Eq};
-    use iter::Iterator;
     use option::Option;
     use option::Option::Some;
     use ops;
@@ -1664,24 +1661,23 @@ pub trait StrExt {
     #[stable(feature = "core", since = "1.6.0")]
     fn trim_right_matches<'a, P: Pattern<'a>>(&'a self, pat: P) -> &'a str
         where P::Searcher: ReverseSearcher<'a>;
-    #[unstable(feature = "str_char",
-               reason = "it is unclear whether this method pulls its weight \
-                         with the existence of the char_indices iterator or \
-                         this method may want to be replaced with checked \
-                         slicing",
-               issue = "27754")]
+    #[stable(feature = "is_char_boundary", since = "1.9.0")]
     fn is_char_boundary(&self, index: usize) -> bool;
     #[unstable(feature = "str_char",
                reason = "often replaced by char_indices, this method may \
                          be removed in favor of just char_at() or eventually \
                          removed altogether",
                issue = "27754")]
+    #[rustc_deprecated(reason = "use slicing plus chars() plus len_utf8",
+                       since = "1.9.0")]
     fn char_range_at(&self, start: usize) -> CharRange;
     #[unstable(feature = "str_char",
                reason = "often replaced by char_indices, this method may \
                          be removed in favor of just char_at_reverse() or \
                          eventually removed altogether",
                issue = "27754")]
+    #[rustc_deprecated(reason = "use slicing plus chars().rev() plus len_utf8",
+                       since = "1.9.0")]
     fn char_range_at_reverse(&self, start: usize) -> CharRange;
     #[unstable(feature = "str_char",
                reason = "frequently replaced by the chars() iterator, this \
@@ -1690,12 +1686,16 @@ pub trait StrExt {
                          iterators or by getting the first char from a \
                          subslice",
                issue = "27754")]
+    #[rustc_deprecated(reason = "use slicing plus chars()",
+                       since = "1.9.0")]
     fn char_at(&self, i: usize) -> char;
     #[unstable(feature = "str_char",
                reason = "see char_at for more details, but reverse semantics \
                          are also somewhat unclear, especially with which \
                          cases generate panics",
                issue = "27754")]
+    #[rustc_deprecated(reason = "use slicing plus chars().rev()",
+                       since = "1.9.0")]
     fn char_at_reverse(&self, i: usize) -> char;
     #[stable(feature = "core", since = "1.6.0")]
     fn as_bytes(&self) -> &[u8];
@@ -1714,6 +1714,8 @@ pub trait StrExt {
                          may not be warranted with the existence of the chars \
                          and/or char_indices iterators",
                issue = "27754")]
+    #[rustc_deprecated(reason = "use chars() plus Chars::as_str",
+                       since = "1.9.0")]
     fn slice_shift_char(&self) -> Option<(char, &str)>;
     #[stable(feature = "core", since = "1.6.0")]
     fn as_ptr(&self) -> *const u8;
@@ -1857,18 +1859,16 @@ impl StrExt for str {
 
     #[inline]
     unsafe fn slice_unchecked(&self, begin: usize, end: usize) -> &str {
-        mem::transmute(Slice {
-            data: self.as_ptr().offset(begin as isize),
-            len: end - begin,
-        })
+        let ptr = self.as_ptr().offset(begin as isize);
+        let len = end - begin;
+        from_utf8_unchecked(slice::from_raw_parts(ptr, len))
     }
 
     #[inline]
     unsafe fn slice_mut_unchecked(&mut self, begin: usize, end: usize) -> &mut str {
-        mem::transmute(Slice {
-            data: self.as_ptr().offset(begin as isize),
-            len: end - begin,
-        })
+        let ptr = self.as_ptr().offset(begin as isize);
+        let len = end - begin;
+        mem::transmute(slice::from_raw_parts_mut(ptr as *mut u8, len))
     }
 
     #[inline]
@@ -1940,7 +1940,8 @@ impl StrExt for str {
         if index == 0 || index == self.len() { return true; }
         match self.as_bytes().get(index) {
             None => false,
-            Some(&b) => b < 128 || b >= 192,
+            // This is bit magic equivalent to: b < 128 || b >= 192
+            Some(&b) => (b as i8) >= -0x40,
         }
     }
 
@@ -1982,11 +1983,13 @@ impl StrExt for str {
     }
 
     #[inline]
+    #[allow(deprecated)]
     fn char_at(&self, i: usize) -> char {
         self.char_range_at(i).ch
     }
 
     #[inline]
+    #[allow(deprecated)]
     fn char_at_reverse(&self, i: usize) -> char {
         self.char_range_at_reverse(i).ch
     }
@@ -2038,6 +2041,7 @@ impl StrExt for str {
     }
 
     #[inline]
+    #[allow(deprecated)]
     fn slice_shift_char(&self) -> Option<(char, &str)> {
         if self.is_empty() {
             None
@@ -2054,7 +2058,9 @@ impl StrExt for str {
     }
 
     #[inline]
-    fn len(&self) -> usize { self.repr().len }
+    fn len(&self) -> usize {
+        self.as_bytes().len()
+    }
 
     #[inline]
     fn is_empty(&self) -> bool { self.len() == 0 }

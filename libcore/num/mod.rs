@@ -14,7 +14,7 @@
 #![allow(missing_docs)]
 
 use char::CharExt;
-use cmp::{Eq, PartialOrd};
+use cmp::PartialOrd;
 use convert::From;
 use fmt;
 use intrinsics;
@@ -38,15 +38,27 @@ use slice::SliceExt;
 /// all standard arithmetic operations on the underlying value are
 /// intended to have wrapping semantics.
 #[stable(feature = "rust1", since = "1.0.0")]
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, Default)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Default, Hash)]
 pub struct Wrapping<T>(#[stable(feature = "rust1", since = "1.0.0")] pub T);
+
+#[stable(feature = "rust1", since = "1.0.0")]
+impl<T: fmt::Debug> fmt::Debug for Wrapping<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+#[stable(feature = "wrapping_display", since = "1.10.0")]
+impl<T: fmt::Display> fmt::Display for Wrapping<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
 mod wrapping;
 
 // All these modules are technically private and only exposed for libcoretest:
-#[cfg(not(disable_float))]
 pub mod flt2dec;
-#[cfg(not(disable_float))]
 pub mod dec2flt;
 pub mod bignum;
 pub mod diy_float;
@@ -113,7 +125,6 @@ macro_rules! zero_one_impl_float {
         }
     )*)
 }
-#[cfg(not(disable_float))]
 zero_one_impl_float! { f32 f64 }
 
 macro_rules! checked_op {
@@ -152,7 +163,7 @@ macro_rules! int_impl {
         /// Basic usage:
         ///
         /// ```
-        /// assert_eq!(u32::from_str_radix("A", 16), Ok(10));
+        /// assert_eq!(i32::from_str_radix("A", 16), Ok(10));
         /// ```
         #[stable(feature = "rust1", since = "1.0.0")]
         pub fn from_str_radix(src: &str, radix: u32) -> Result<Self, ParseIntError> {
@@ -166,9 +177,9 @@ macro_rules! int_impl {
         /// Basic usage:
         ///
         /// ```
-        /// let n = 0b01001100u8;
+        /// let n = -0b1000_0000i8;
         ///
-        /// assert_eq!(n.count_ones(), 3);
+        /// assert_eq!(n.count_ones(), 1);
         /// ```
         #[stable(feature = "rust1", since = "1.0.0")]
         #[inline]
@@ -181,9 +192,9 @@ macro_rules! int_impl {
         /// Basic usage:
         ///
         /// ```
-        /// let n = 0b01001100u8;
+        /// let n = -0b1000_0000i8;
         ///
-        /// assert_eq!(n.count_zeros(), 5);
+        /// assert_eq!(n.count_zeros(), 7);
         /// ```
         #[stable(feature = "rust1", since = "1.0.0")]
         #[inline]
@@ -199,9 +210,9 @@ macro_rules! int_impl {
         /// Basic usage:
         ///
         /// ```
-        /// let n = 0b0101000u16;
+        /// let n = -1i16;
         ///
-        /// assert_eq!(n.leading_zeros(), 10);
+        /// assert_eq!(n.leading_zeros(), 0);
         /// ```
         #[stable(feature = "rust1", since = "1.0.0")]
         #[inline]
@@ -217,9 +228,9 @@ macro_rules! int_impl {
         /// Basic usage:
         ///
         /// ```
-        /// let n = 0b0101000u16;
+        /// let n = -4i8;
         ///
-        /// assert_eq!(n.trailing_zeros(), 3);
+        /// assert_eq!(n.trailing_zeros(), 2);
         /// ```
         #[stable(feature = "rust1", since = "1.0.0")]
         #[inline]
@@ -235,10 +246,10 @@ macro_rules! int_impl {
         /// Basic usage:
         ///
         /// ```
-        /// let n = 0x0123456789ABCDEFu64;
-        /// let m = 0x3456789ABCDEF012u64;
+        /// let n = 0x0123456789ABCDEFi64;
+        /// let m = -0x76543210FEDCBA99i64;
         ///
-        /// assert_eq!(n.rotate_left(12), m);
+        /// assert_eq!(n.rotate_left(32), m);
         /// ```
         #[stable(feature = "rust1", since = "1.0.0")]
         #[inline]
@@ -255,10 +266,10 @@ macro_rules! int_impl {
         /// Basic usage:
         ///
         /// ```
-        /// let n = 0x0123456789ABCDEFu64;
-        /// let m = 0xDEF0123456789ABCu64;
+        /// let n = 0x0123456789ABCDEFi64;
+        /// let m = -0xFEDCBA987654322i64;
         ///
-        /// assert_eq!(n.rotate_right(12), m);
+        /// assert_eq!(n.rotate_right(4), m);
         /// ```
         #[stable(feature = "rust1", since = "1.0.0")]
         #[inline]
@@ -273,8 +284,8 @@ macro_rules! int_impl {
         /// Basic usage:
         ///
         /// ```
-        /// let n = 0x0123456789ABCDEFu64;
-        /// let m = 0xEFCDAB8967452301u64;
+        /// let n =  0x0123456789ABCDEFi64;
+        /// let m = -0x1032547698BADCFFi64;
         ///
         /// assert_eq!(n.swap_bytes(), m);
         /// ```
@@ -294,12 +305,12 @@ macro_rules! int_impl {
         /// Basic usage:
         ///
         /// ```
-        /// let n = 0x0123456789ABCDEFu64;
+        /// let n = 0x0123456789ABCDEFi64;
         ///
         /// if cfg!(target_endian = "big") {
-        ///     assert_eq!(u64::from_be(n), n)
+        ///     assert_eq!(i64::from_be(n), n)
         /// } else {
-        ///     assert_eq!(u64::from_be(n), n.swap_bytes())
+        ///     assert_eq!(i64::from_be(n), n.swap_bytes())
         /// }
         /// ```
         #[stable(feature = "rust1", since = "1.0.0")]
@@ -318,12 +329,12 @@ macro_rules! int_impl {
         /// Basic usage:
         ///
         /// ```
-        /// let n = 0x0123456789ABCDEFu64;
+        /// let n = 0x0123456789ABCDEFi64;
         ///
         /// if cfg!(target_endian = "little") {
-        ///     assert_eq!(u64::from_le(n), n)
+        ///     assert_eq!(i64::from_le(n), n)
         /// } else {
-        ///     assert_eq!(u64::from_le(n), n.swap_bytes())
+        ///     assert_eq!(i64::from_le(n), n.swap_bytes())
         /// }
         /// ```
         #[stable(feature = "rust1", since = "1.0.0")]
@@ -342,7 +353,7 @@ macro_rules! int_impl {
         /// Basic usage:
         ///
         /// ```
-        /// let n = 0x0123456789ABCDEFu64;
+        /// let n = 0x0123456789ABCDEFi64;
         ///
         /// if cfg!(target_endian = "big") {
         ///     assert_eq!(n.to_be(), n)
@@ -366,7 +377,7 @@ macro_rules! int_impl {
         /// Basic usage:
         ///
         /// ```
-        /// let n = 0x0123456789ABCDEFu64;
+        /// let n = 0x0123456789ABCDEFi64;
         ///
         /// if cfg!(target_endian = "little") {
         ///     assert_eq!(n.to_le(), n)
@@ -388,8 +399,8 @@ macro_rules! int_impl {
         /// Basic usage:
         ///
         /// ```
-        /// assert_eq!(5u16.checked_add(65530), Some(65535));
-        /// assert_eq!(6u16.checked_add(65530), None);
+        /// assert_eq!(7i16.checked_add(32760), Some(32767));
+        /// assert_eq!(8i16.checked_add(32760), None);
         /// ```
         #[stable(feature = "rust1", since = "1.0.0")]
         #[inline]
@@ -424,8 +435,8 @@ macro_rules! int_impl {
         /// Basic usage:
         ///
         /// ```
-        /// assert_eq!(5u8.checked_mul(51), Some(255));
-        /// assert_eq!(5u8.checked_mul(52), None);
+        /// assert_eq!(6i8.checked_mul(21), Some(126));
+        /// assert_eq!(6i8.checked_mul(22), None);
         /// ```
         #[stable(feature = "rust1", since = "1.0.0")]
         #[inline]
@@ -756,8 +767,8 @@ macro_rules! int_impl {
         /// Basic usage:
         ///
         /// ```
-        /// assert_eq!(1u8.wrapping_shl(7), 128);
-        /// assert_eq!(1u8.wrapping_shl(8), 1);
+        /// assert_eq!((-1i8).wrapping_shl(7), -128);
+        /// assert_eq!((-1i8).wrapping_shl(8), -1);
         /// ```
         #[stable(feature = "num_wrapping", since = "1.2.0")]
         #[inline(always)]
@@ -781,8 +792,8 @@ macro_rules! int_impl {
         /// Basic usage:
         ///
         /// ```
-        /// assert_eq!(128u8.wrapping_shr(7), 1);
-        /// assert_eq!(128u8.wrapping_shr(8), 128);
+        /// assert_eq!((-128i8).wrapping_shr(7), -1);
+        /// assert_eq!((-128i8).wrapping_shr(8), -128);
         /// ```
         #[stable(feature = "num_wrapping", since = "1.2.0")]
         #[inline(always)]
@@ -1196,15 +1207,13 @@ macro_rules! uint_impl {
         ///
         /// Leading and trailing whitespace represent an error.
         ///
-        /// # Arguments
+        /// # Examples
         ///
-        /// * src - A string slice
-        /// * radix - The base to use. Must lie in the range [2 .. 36]
+        /// Basic usage:
         ///
-        /// # Return value
-        ///
-        /// `Err(ParseIntError)` if the string did not represent a valid number.
-        /// Otherwise, `Ok(n)` where `n` is the integer represented by `src`.
+        /// ```
+        /// assert_eq!(u32::from_str_radix("A", 16), Ok(10));
+        /// ```
         #[stable(feature = "rust1", since = "1.0.0")]
         pub fn from_str_radix(src: &str, radix: u32) -> Result<Self, ParseIntError> {
             from_str_radix(src, radix)
@@ -1748,7 +1757,7 @@ macro_rules! uint_impl {
         /// Basic usage:
         ///
         /// ```
-        /// assert_eq!(100i8.wrapping_rem(10), 0);
+        /// assert_eq!(100u8.wrapping_rem(10), 0);
         /// ```
         #[stable(feature = "num_wrapping", since = "1.2.0")]
         #[inline(always)]
@@ -1786,6 +1795,13 @@ macro_rules! uint_impl {
         /// where `mask` removes any high-order bits of `rhs` that
         /// would cause the shift to exceed the bitwidth of the type.
         ///
+        /// Note that this is *not* the same as a rotate-left; the
+        /// RHS of a wrapping shift-left is restricted to the range
+        /// of the type, rather than the bits shifted out of the LHS
+        /// being returned to the other end. The primitive integer
+        /// types all implement a `rotate_left` function, which may
+        /// be what you want instead.
+        ///
         /// # Examples
         ///
         /// Basic usage:
@@ -1803,6 +1819,13 @@ macro_rules! uint_impl {
         /// Panic-free bitwise shift-right; yields `self >> mask(rhs)`,
         /// where `mask` removes any high-order bits of `rhs` that
         /// would cause the shift to exceed the bitwidth of the type.
+        ///
+        /// Note that this is *not* the same as a rotate-right; the
+        /// RHS of a wrapping shift-right is restricted to the range
+        /// of the type, rather than the bits shifted out of the LHS
+        /// being returned to the other end. The primitive integer
+        /// types all implement a `rotate_right` function, which may
+        /// be what you want instead.
         ///
         /// # Examples
         ///
@@ -2216,7 +2239,6 @@ pub enum FpCategory {
 #[unstable(feature = "core_float",
            reason = "stable interface is via `impl f{32,64}` in later crates",
            issue = "32110")]
-#[cfg(not(disable_float))]
 pub trait Float: Sized {
     /// Returns the NaN value.
     #[unstable(feature = "float_extras", reason = "needs removal",
@@ -2455,7 +2477,6 @@ impl fmt::Display for ParseIntError {
 }
 
 #[stable(feature = "rust1", since = "1.0.0")]
-#[cfg(not(disable_float))]
 pub use num::dec2flt::ParseFloatError;
 
 // Conversion traits for primitive integer and float types
@@ -2503,9 +2524,6 @@ impl_from! { u32, i64 }
 // they fit in the significand, which is 24 bits in f32 and 53 bits in f64.
 // Lossy float conversions are not implemented at this time.
 
-#[cfg(not(disable_float))]
-mod _int_flot_conv {
-use convert::From;
 // Signed -> Float
 impl_from! { i8, f32 }
 impl_from! { i8, f64 }
@@ -2522,4 +2540,3 @@ impl_from! { u32, f64 }
 
 // Float -> Float
 impl_from! { f32, f64 }
-}

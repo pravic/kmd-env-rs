@@ -12,7 +12,6 @@
 
 use prelude::v1::*;
 
-#[cfg(not(disable_float))]
 use {f32, f64};
 use num::{Float, FpCategory};
 
@@ -58,12 +57,10 @@ pub trait DecodableFloat: Float + Copy {
     fn min_pos_norm_value() -> Self;
 }
 
-#[cfg(not(disable_float))]
 impl DecodableFloat for f32 {
     fn min_pos_norm_value() -> Self { f32::MIN_POSITIVE }
 }
 
-#[cfg(not(disable_float))]
 impl DecodableFloat for f64 {
     fn min_pos_norm_value() -> Self { f64::MIN_POSITIVE }
 }
