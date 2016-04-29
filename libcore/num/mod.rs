@@ -58,7 +58,9 @@ impl<T: fmt::Display> fmt::Display for Wrapping<T> {
 mod wrapping;
 
 // All these modules are technically private and only exposed for libcoretest:
+#[cfg(not(disable_float))]
 pub mod flt2dec;
+#[cfg(not(disable_float))]
 pub mod dec2flt;
 pub mod bignum;
 pub mod diy_float;
@@ -125,6 +127,7 @@ macro_rules! zero_one_impl_float {
         }
     )*)
 }
+#[cfg(not(disable_float))]
 zero_one_impl_float! { f32 f64 }
 
 macro_rules! checked_op {
@@ -2239,6 +2242,7 @@ pub enum FpCategory {
 #[unstable(feature = "core_float",
            reason = "stable interface is via `impl f{32,64}` in later crates",
            issue = "32110")]
+#[cfg(not(disable_float))]
 pub trait Float: Sized {
     /// Returns the NaN value.
     #[unstable(feature = "float_extras", reason = "needs removal",
@@ -2477,6 +2481,7 @@ impl fmt::Display for ParseIntError {
 }
 
 #[stable(feature = "rust1", since = "1.0.0")]
+#[cfg(not(disable_float))]
 pub use num::dec2flt::ParseFloatError;
 
 // Conversion traits for primitive integer and float types
@@ -2524,6 +2529,9 @@ impl_from! { u32, i64 }
 // they fit in the significand, which is 24 bits in f32 and 53 bits in f64.
 // Lossy float conversions are not implemented at this time.
 
+#[cfg(not(disable_float))]
+mod _int_flot_conv {
+use convert::From;
 // Signed -> Float
 impl_from! { i8, f32 }
 impl_from! { i8, f64 }
@@ -2540,3 +2548,4 @@ impl_from! { u32, f64 }
 
 // Float -> Float
 impl_from! { f32, f64 }
+}

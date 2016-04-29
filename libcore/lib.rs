@@ -107,7 +107,9 @@ mod uint_macros;
 #[path = "num/u32.rs"]  pub mod u32;
 #[path = "num/u64.rs"]  pub mod u64;
 
+#[cfg(not(disable_float))]
 #[path = "num/f32.rs"]   pub mod f32;
+#[cfg(not(disable_float))]
 #[path = "num/f64.rs"]   pub mod f64;
 
 #[macro_use]
