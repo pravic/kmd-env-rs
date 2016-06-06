@@ -172,6 +172,7 @@ pub trait Iterator {
     /// assert_eq!(a.iter().count(), 5);
     /// ```
     #[inline]
+    #[rustc_inherit_overflow_checks]
     #[stable(feature = "rust1", since = "1.0.0")]
     fn count(self) -> usize where Self: Sized {
         // Might overflow.
@@ -214,7 +215,7 @@ pub trait Iterator {
     /// Like most indexing operations, the count starts from zero, so `nth(0)`
     /// returns the first value, `nth(1)` the second, and so on.
     ///
-    /// `nth()` will return `None` if `n` is larger than the length of the
+    /// `nth()` will return `None` if `n` is greater than or equal to the length of the
     /// iterator.
     ///
     /// # Examples
@@ -237,7 +238,7 @@ pub trait Iterator {
     /// assert_eq!(iter.nth(1), None);
     /// ```
     ///
-    /// Returning `None` if there are less than `n` elements:
+    /// Returning `None` if there are less than `n + 1` elements:
     ///
     /// ```
     /// let a = [1, 2, 3];

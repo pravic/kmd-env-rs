@@ -510,6 +510,7 @@ impl<A, B> Iterator for Chain<A, B> where
     }
 
     #[inline]
+    #[rustc_inherit_overflow_checks]
     fn count(self) -> usize {
         match self.state {
             ChainState::Both => self.a.count() + self.b.count(),
@@ -538,6 +539,23 @@ impl<A, B> Iterator for Chain<A, B> where
             self.b.nth(n)
         } else {
             None
+        }
+    }
+
+    #[inline]
+    fn find<P>(&mut self, mut predicate: P) -> Option<Self::Item> where
+        P: FnMut(&Self::Item) -> bool,
+    {
+        match self.state {
+            ChainState::Both => match self.a.find(&mut predicate) {
+                None => {
+                    self.state = ChainState::Back;
+                    self.b.find(predicate)
+                }
+                v => v
+            },
+            ChainState::Front => self.a.find(predicate),
+            ChainState::Back => self.b.find(predicate),
         }
     }
 
@@ -915,6 +933,7 @@ impl<I> Iterator for Enumerate<I> where I: Iterator {
     ///
     /// Might panic if the index of the element overflows a `usize`.
     #[inline]
+    #[rustc_inherit_overflow_checks]
     fn next(&mut self) -> Option<(usize, <I as Iterator>::Item)> {
         self.iter.next().map(|a| {
             let ret = (self.count, a);
@@ -930,6 +949,7 @@ impl<I> Iterator for Enumerate<I> where I: Iterator {
     }
 
     #[inline]
+    #[rustc_inherit_overflow_checks]
     fn nth(&mut self, n: usize) -> Option<(usize, I::Item)> {
         self.iter.nth(n).map(|a| {
             let i = self.count + n;
@@ -991,6 +1011,7 @@ impl<I: Iterator> Iterator for Peekable<I> {
     }
 
     #[inline]
+    #[rustc_inherit_overflow_checks]
     fn count(self) -> usize {
         (if self.peeked.is_some() { 1 } else { 0 }) + self.iter.count()
     }
@@ -1108,6 +1129,7 @@ impl<I: Iterator> Peekable<I> {
     /// ```
     #[unstable(feature = "peekable_is_empty", issue = "32111")]
     #[inline]
+    #[rustc_deprecated(since = "1.10.0", reason = "replaced by .peek().is_none()")]
     pub fn is_empty(&mut self) -> bool {
         self.peek().is_none()
     }

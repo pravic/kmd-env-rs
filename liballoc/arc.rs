@@ -72,7 +72,7 @@
 use boxed::Box;
 
 use core::sync::atomic;
-use core::sync::atomic::Ordering::{Relaxed, Release, Acquire, SeqCst};
+use core::sync::atomic::Ordering::{Acquire, Relaxed, Release, SeqCst};
 use core::borrow;
 use core::fmt;
 use core::cmp::Ordering;
@@ -85,7 +85,7 @@ use core::ops::CoerceUnsized;
 use core::ptr::{self, Shared};
 use core::marker::Unsize;
 use core::hash::{Hash, Hasher};
-use core::{usize, isize};
+use core::{isize, usize};
 use core::convert::From;
 use heap::deallocate;
 
@@ -592,6 +592,33 @@ impl<T: ?Sized> Drop for Arc<T> {
     }
 }
 
+impl<T> Weak<T> {
+    /// Constructs a new `Weak<T>` without an accompanying instance of T.
+    ///
+    /// This allocates memory for T, but does not initialize it. Calling
+    /// Weak<T>::upgrade() on the return value always gives None.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::sync::Weak;
+    ///
+    /// let empty: Weak<i64> = Weak::new();
+    /// ```
+    #[stable(feature = "downgraded_weak", since = "1.10.0")]
+    pub fn new() -> Weak<T> {
+        unsafe {
+            Weak {
+                ptr: Shared::new(Box::into_raw(box ArcInner {
+                    strong: atomic::AtomicUsize::new(0),
+                    weak: atomic::AtomicUsize::new(1),
+                    data: uninitialized(),
+                })),
+            }
+        }
+    }
+}
+
 impl<T: ?Sized> Weak<T> {
     /// Upgrades a weak reference to a strong reference.
     ///
@@ -630,7 +657,9 @@ impl<T: ?Sized> Weak<T> {
 
             // See comments in `Arc::clone` for why we do this (for `mem::forget`).
             if n > MAX_REFCOUNT {
-                unsafe { abort(); }
+                unsafe {
+                    abort();
+                }
             }
 
             // Relaxed is valid for the same reason it is on Arc's Clone impl
@@ -679,6 +708,13 @@ impl<T: ?Sized> Clone for Weak<T> {
         }
 
         return Weak { ptr: self.ptr };
+    }
+}
+
+#[stable(feature = "downgraded_weak", since = "1.10.0")]
+impl<T> Default for Weak<T> {
+    fn default() -> Weak<T> {
+        Weak::new()
     }
 }
 
@@ -907,35 +943,6 @@ impl<T> From<T> for Arc<T> {
     }
 }
 
-impl<T> Weak<T> {
-    /// Constructs a new `Weak<T>` without an accompanying instance of T.
-    ///
-    /// This allocates memory for T, but does not initialize it. Calling
-    /// Weak<T>::upgrade() on the return value always gives None.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// #![feature(downgraded_weak)]
-    ///
-    /// use std::sync::Weak;
-    ///
-    /// let empty: Weak<i64> = Weak::new();
-    /// ```
-    #[unstable(feature = "downgraded_weak",
-               reason = "recently added",
-               issue = "30425")]
-    pub fn new() -> Weak<T> {
-        unsafe {
-            Weak { ptr: Shared::new(Box::into_raw(box ArcInner {
-                strong: atomic::AtomicUsize::new(0),
-                weak: atomic::AtomicUsize::new(1),
-                data: uninitialized(),
-            }))}
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::clone::Clone;
@@ -943,7 +950,7 @@ mod tests {
     use std::mem::drop;
     use std::ops::Drop;
     use std::option::Option;
-    use std::option::Option::{Some, None};
+    use std::option::Option::{None, Some};
     use std::sync::atomic;
     use std::sync::atomic::Ordering::{Acquire, SeqCst};
     use std::thread;

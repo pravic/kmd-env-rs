@@ -159,11 +159,11 @@ use core::borrow;
 use core::cell::Cell;
 use core::cmp::Ordering;
 use core::fmt;
-use core::hash::{Hasher, Hash};
-use core::intrinsics::{assume, abort};
+use core::hash::{Hash, Hasher};
+use core::intrinsics::{abort, assume};
 use core::marker;
 use core::marker::Unsize;
-use core::mem::{self, align_of_val, size_of_val, forget, uninitialized};
+use core::mem::{self, align_of_val, forget, size_of_val, uninitialized};
 use core::ops::Deref;
 use core::ops::CoerceUnsized;
 use core::ptr::{self, Shared};
@@ -720,6 +720,33 @@ impl<T: ?Sized> !marker::Sync for Weak<T> {}
 #[unstable(feature = "coerce_unsized", issue = "27732")]
 impl<T: ?Sized + Unsize<U>, U: ?Sized> CoerceUnsized<Weak<U>> for Weak<T> {}
 
+impl<T> Weak<T> {
+    /// Constructs a new `Weak<T>` without an accompanying instance of T.
+    ///
+    /// This allocates memory for T, but does not initialize it. Calling
+    /// Weak<T>::upgrade() on the return value always gives None.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::rc::Weak;
+    ///
+    /// let empty: Weak<i64> = Weak::new();
+    /// ```
+    #[stable(feature = "downgraded_weak", since = "1.10.0")]
+    pub fn new() -> Weak<T> {
+        unsafe {
+            Weak {
+                ptr: Shared::new(Box::into_raw(box RcBox {
+                    strong: Cell::new(0),
+                    weak: Cell::new(1),
+                    value: uninitialized(),
+                })),
+            }
+        }
+    }
+}
+
 impl<T: ?Sized> Weak<T> {
     /// Upgrades a weak reference to a strong reference.
     ///
@@ -823,34 +850,10 @@ impl<T: ?Sized + fmt::Debug> fmt::Debug for Weak<T> {
     }
 }
 
-impl<T> Weak<T> {
-    /// Constructs a new `Weak<T>` without an accompanying instance of T.
-    ///
-    /// This allocates memory for T, but does not initialize it. Calling
-    /// Weak<T>::upgrade() on the return value always gives None.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// #![feature(downgraded_weak)]
-    ///
-    /// use std::rc::Weak;
-    ///
-    /// let empty: Weak<i64> = Weak::new();
-    /// ```
-    #[unstable(feature = "downgraded_weak",
-               reason = "recently added",
-               issue="30425")]
-    pub fn new() -> Weak<T> {
-        unsafe {
-            Weak {
-                ptr: Shared::new(Box::into_raw(box RcBox {
-                    strong: Cell::new(0),
-                    weak: Cell::new(1),
-                    value: uninitialized(),
-                })),
-            }
-        }
+#[stable(feature = "downgraded_weak", since = "1.10.0")]
+impl<T> Default for Weak<T> {
+    fn default() -> Weak<T> {
+        Weak::new()
     }
 }
 
@@ -932,7 +935,7 @@ mod tests {
     use std::boxed::Box;
     use std::cell::RefCell;
     use std::option::Option;
-    use std::option::Option::{Some, None};
+    use std::option::Option::{None, Some};
     use std::result::Result::{Err, Ok};
     use std::mem::drop;
     use std::clone::Clone;

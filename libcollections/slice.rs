@@ -419,8 +419,8 @@ impl<T> [T] {
     ///
     /// ```rust
     /// let v = &[1, 2, 3, 4, 5];
-    /// for win in v.chunks(2) {
-    ///     println!("{:?}", win);
+    /// for chunk in v.chunks(2) {
+    ///     println!("{:?}", chunk);
     /// }
     /// ```
     #[stable(feature = "rust1", since = "1.0.0")]
@@ -759,7 +759,6 @@ impl<T> [T] {
     /// fourth could match any position in `[1,4]`.
     ///
     /// ```rust
-    /// #![feature(slice_binary_search_by_key)]
     /// let s = [(0, 0), (2, 1), (4, 1), (5, 1), (3, 1),
     ///          (1, 2), (2, 3), (4, 5), (5, 8), (3, 13),
     ///          (1, 21), (2, 34), (4, 55)];
@@ -770,7 +769,7 @@ impl<T> [T] {
     /// let r = s.binary_search_by_key(&1, |&(a,b)| b);
     /// assert!(match r { Ok(1...4) => true, _ => false, });
     /// ```
-    #[unstable(feature = "slice_binary_search_by_key", reason = "recently added", issue = "33018")]
+    #[stable(feature = "slice_binary_search_by_key", since = "1.10.0")]
     #[inline]
     pub fn binary_search_by_key<B, F>(&self, b: &B, f: F) -> Result<usize, usize>
         where F: FnMut(&T) -> B,
@@ -779,11 +778,10 @@ impl<T> [T] {
         core_slice::SliceExt::binary_search_by_key(self, b, f)
     }
 
-    /// Sorts the slice, in place.
-    ///
     /// This is equivalent to `self.sort_by(|a, b| a.cmp(b))`.
     ///
-    /// This is a stable sort.
+    /// This sort is stable and `O(n log n)` worst-case but allocates
+    /// approximately `2 * n` where `n` is the length of `self`.
     ///
     /// # Examples
     ///
@@ -804,10 +802,8 @@ impl<T> [T] {
     /// Sorts the slice, in place, using `key` to extract a key by which to
     /// order the sort by.
     ///
-    /// This sort is `O(n log n)` worst-case and stable, but allocates
+    /// This sort is stable and `O(n log n)` worst-case but allocates
     /// approximately `2 * n`, where `n` is the length of `self`.
-    ///
-    /// This is a stable sort.
     ///
     /// # Examples
     ///
@@ -828,7 +824,7 @@ impl<T> [T] {
     /// Sorts the slice, in place, using `compare` to compare
     /// elements.
     ///
-    /// This sort is `O(n log n)` worst-case and stable, but allocates
+    /// This sort is stable and `O(n log n)` worst-case but allocates
     /// approximately `2 * n`, where `n` is the length of `self`.
     ///
     /// # Examples

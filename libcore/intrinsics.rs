@@ -10,7 +10,7 @@
 
 //! rustc compiler intrinsics.
 //!
-//! The corresponding definitions are in librustc_trans/trans/intrinsic.rs.
+//! The corresponding definitions are in librustc_trans/intrinsic.rs.
 //!
 //! # Volatiles
 //!
@@ -168,6 +168,16 @@ extern "rust-intrinsic" {
     pub fn atomic_singlethreadfence_rel();
     pub fn atomic_singlethreadfence_acqrel();
 
+    /// Magic intrinsic that derives its meaning from attributes
+    /// attached to the function.
+    ///
+    /// For example, dataflow uses this to inject static assertions so
+    /// that `rustc_peek(potentially_uninitialized)` would actually
+    /// double-check that dataflow did indeed compute that it is
+    /// uninitialized at that point in the control flow.
+    #[cfg(not(stage0))]
+    pub fn rustc_peek<T>(_: T) -> T;
+
     /// Aborts the execution of the process.
     pub fn abort() -> !;
 
@@ -192,11 +202,8 @@ extern "rust-intrinsic" {
 
     /// The size of a type in bytes.
     ///
-    /// This is the exact number of bytes in memory taken up by a
-    /// value of the given type. In other words, a memset of this size
-    /// would *exactly* overwrite a value. When laid out in vectors
-    /// and structures there may be additional padding between
-    /// elements.
+    /// More specifically, this is the offset in bytes between successive
+    /// items of the same type, including alignment padding.
     pub fn size_of<T>() -> usize;
 
     /// Moves a value to an uninitialized memory location.

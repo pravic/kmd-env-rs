@@ -15,7 +15,7 @@
 
 use char::CharExt;
 use cmp::PartialOrd;
-use convert::From;
+use convert::{From, TryFrom};
 use fmt;
 use intrinsics;
 use marker::{Copy, Sized};
@@ -37,6 +37,17 @@ use slice::SliceExt;
 /// `wrapping_add`, or through the `Wrapping<T>` type, which says that
 /// all standard arithmetic operations on the underlying value are
 /// intended to have wrapping semantics.
+///
+/// # Examples
+///
+/// ```
+/// use std::num::Wrapping;
+///
+/// let zero = Wrapping(0u32);
+/// let one = Wrapping(1u32);
+///
+/// assert_eq!(std::u32::MAX, (zero - one).0);
+/// ```
 #[stable(feature = "rust1", since = "1.0.0")]
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Default, Hash)]
 pub struct Wrapping<T>(#[stable(feature = "rust1", since = "1.0.0")] pub T);
@@ -1022,7 +1033,7 @@ macro_rules! int_impl {
         /// ```
         #[stable(feature = "rust1", since = "1.0.0")]
         #[inline]
-        #[rustc_no_mir] // FIXME #29769 MIR overflow checking is TBD.
+        #[rustc_inherit_overflow_checks]
         pub fn pow(self, mut exp: u32) -> Self {
             let mut base = self;
             let mut acc = Self::one();
@@ -1064,7 +1075,7 @@ macro_rules! int_impl {
         /// ```
         #[stable(feature = "rust1", since = "1.0.0")]
         #[inline]
-        #[rustc_no_mir] // FIXME #29769 MIR overflow checking is TBD.
+        #[rustc_inherit_overflow_checks]
         pub fn abs(self) -> Self {
             if self.is_negative() {
                 // Note that the #[inline] above means that the overflow
@@ -1160,6 +1171,15 @@ impl i32 {
 #[lang = "i64"]
 impl i64 {
     int_impl! { i64, u64, 64,
+        intrinsics::add_with_overflow,
+        intrinsics::sub_with_overflow,
+        intrinsics::mul_with_overflow }
+}
+
+#[cfg(target_pointer_width = "16")]
+#[lang = "isize"]
+impl isize {
+    int_impl! { i16, u16, 16,
         intrinsics::add_with_overflow,
         intrinsics::sub_with_overflow,
         intrinsics::mul_with_overflow }
@@ -2041,7 +2061,7 @@ macro_rules! uint_impl {
         /// ```
         #[stable(feature = "rust1", since = "1.0.0")]
         #[inline]
-        #[rustc_no_mir] // FIXME #29769 MIR overflow checking is TBD.
+        #[rustc_inherit_overflow_checks]
         pub fn pow(self, mut exp: u32) -> Self {
             let mut base = self;
             let mut acc = Self::one();
@@ -2177,6 +2197,18 @@ impl u64 {
         intrinsics::mul_with_overflow }
 }
 
+#[cfg(target_pointer_width = "16")]
+#[lang = "usize"]
+impl usize {
+    uint_impl! { u16, 16,
+        intrinsics::ctpop,
+        intrinsics::ctlz,
+        intrinsics::cttz,
+        intrinsics::bswap,
+        intrinsics::add_with_overflow,
+        intrinsics::sub_with_overflow,
+        intrinsics::mul_with_overflow }
+}
 #[cfg(target_pointer_width = "32")]
 #[lang = "usize"]
 impl usize {
@@ -2341,9 +2373,101 @@ macro_rules! from_str_radix_int_impl {
 }
 from_str_radix_int_impl! { isize i8 i16 i32 i64 usize u8 u16 u32 u64 }
 
+/// The error type returned when a checked integral type conversion fails.
+#[unstable(feature = "try_from", issue = "33417")]
+#[derive(Debug, Copy, Clone)]
+pub struct TryFromIntError(());
+
+impl TryFromIntError {
+    #[unstable(feature = "int_error_internals",
+               reason = "available through Error trait and this method should \
+                         not be exposed publicly",
+               issue = "0")]
+    #[doc(hidden)]
+    pub fn __description(&self) -> &str {
+        "out of range integral type conversion attempted"
+    }
+}
+
+#[unstable(feature = "try_from", issue = "33417")]
+impl fmt::Display for TryFromIntError {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        self.__description().fmt(fmt)
+    }
+}
+
+macro_rules! same_sign_from_int_impl {
+    ($storage:ty, $target:ty, $($source:ty),*) => {$(
+        #[stable(feature = "rust1", since = "1.0.0")]
+        impl TryFrom<$source> for $target {
+            type Err = TryFromIntError;
+
+            fn try_from(u: $source) -> Result<$target, TryFromIntError> {
+                let min = <$target as FromStrRadixHelper>::min_value() as $storage;
+                let max = <$target as FromStrRadixHelper>::max_value() as $storage;
+                if u as $storage < min || u as $storage > max {
+                    Err(TryFromIntError(()))
+                } else {
+                    Ok(u as $target)
+                }
+            }
+        }
+    )*}
+}
+
+same_sign_from_int_impl!(u64, u8, u8, u16, u32, u64, usize);
+same_sign_from_int_impl!(i64, i8, i8, i16, i32, i64, isize);
+same_sign_from_int_impl!(u64, u16, u8, u16, u32, u64, usize);
+same_sign_from_int_impl!(i64, i16, i8, i16, i32, i64, isize);
+same_sign_from_int_impl!(u64, u32, u8, u16, u32, u64, usize);
+same_sign_from_int_impl!(i64, i32, i8, i16, i32, i64, isize);
+same_sign_from_int_impl!(u64, u64, u8, u16, u32, u64, usize);
+same_sign_from_int_impl!(i64, i64, i8, i16, i32, i64, isize);
+same_sign_from_int_impl!(u64, usize, u8, u16, u32, u64, usize);
+same_sign_from_int_impl!(i64, isize, i8, i16, i32, i64, isize);
+
+macro_rules! cross_sign_from_int_impl {
+    ($unsigned:ty, $($signed:ty),*) => {$(
+        #[stable(feature = "rust1", since = "1.0.0")]
+        impl TryFrom<$unsigned> for $signed {
+            type Err = TryFromIntError;
+
+            fn try_from(u: $unsigned) -> Result<$signed, TryFromIntError> {
+                let max = <$signed as FromStrRadixHelper>::max_value() as u64;
+                if u as u64 > max {
+                    Err(TryFromIntError(()))
+                } else {
+                    Ok(u as $signed)
+                }
+            }
+        }
+
+        #[stable(feature = "rust1", since = "1.0.0")]
+        impl TryFrom<$signed> for $unsigned {
+            type Err = TryFromIntError;
+
+            fn try_from(u: $signed) -> Result<$unsigned, TryFromIntError> {
+                let max = <$unsigned as FromStrRadixHelper>::max_value() as u64;
+                if u < 0 || u as u64 > max {
+                    Err(TryFromIntError(()))
+                } else {
+                    Ok(u as $unsigned)
+                }
+            }
+        }
+    )*}
+}
+
+cross_sign_from_int_impl!(u8, i8, i16, i32, i64, isize);
+cross_sign_from_int_impl!(u16, i8, i16, i32, i64, isize);
+cross_sign_from_int_impl!(u32, i8, i16, i32, i64, isize);
+cross_sign_from_int_impl!(u64, i8, i16, i32, i64, isize);
+cross_sign_from_int_impl!(usize, i8, i16, i32, i64, isize);
+
 #[doc(hidden)]
 trait FromStrRadixHelper: PartialOrd + Copy {
     fn min_value() -> Self;
+    fn max_value() -> Self;
     fn from_u32(u: u32) -> Self;
     fn checked_mul(&self, other: u32) -> Option<Self>;
     fn checked_sub(&self, other: u32) -> Option<Self>;
@@ -2353,6 +2477,7 @@ trait FromStrRadixHelper: PartialOrd + Copy {
 macro_rules! doit {
     ($($t:ty)*) => ($(impl FromStrRadixHelper for $t {
         fn min_value() -> Self { Self::min_value() }
+        fn max_value() -> Self { Self::max_value() }
         fn from_u32(u: u32) -> Self { u as Self }
         fn checked_mul(&self, other: u32) -> Option<Self> {
             Self::checked_mul(*self, other as Self)
